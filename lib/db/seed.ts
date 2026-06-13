@@ -1,3 +1,7 @@
+import { config } from "dotenv";
+
+config({ path: ".env.local" });
+
 import { getDb } from "./client";
 import { categories } from "./schema";
 import { eq } from "drizzle-orm";
@@ -25,3 +29,13 @@ export async function seedDefaultCategories() {
     }
   }
 }
+
+seedDefaultCategories()
+  .then(() => {
+    console.log("Seeded default categories");
+    process.exit(0);
+  })
+  .catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });

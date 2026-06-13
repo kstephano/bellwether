@@ -7,7 +7,7 @@ import {
   researchRuns,
   stackEntries,
 } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import type { ReportSections } from "@/lib/research/types";
 
 const TEST_USER = "test-user-reports";
@@ -37,7 +37,14 @@ describe.skipIf(skipIfNoDb)("Report repository", () => {
   });
 
   afterEach(async () => {
-    await db.delete(reports);
+    const runs = await db
+      .select({ id: researchRuns.id })
+      .from(researchRuns)
+      .where(inArray(researchRuns.userId, [TEST_USER, OTHER_USER]));
+    const runIds = runs.map((r) => r.id);
+    if (runIds.length) {
+      await db.delete(reports).where(inArray(reports.researchRunId, runIds));
+    }
     await db.delete(researchRuns).where(eq(researchRuns.userId, TEST_USER));
     await db.delete(researchRuns).where(eq(researchRuns.userId, OTHER_USER));
     await db.delete(stackEntries).where(eq(stackEntries.userId, TEST_USER));

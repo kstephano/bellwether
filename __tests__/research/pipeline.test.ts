@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterEach, vi } from "vitest";
 import { createDbClient, type DbClient } from "@/lib/db/client";
 import { categories, researchRuns, reports, auditLog, stackEntries } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import type { ReportSections, ResearchClients } from "@/lib/research/types";
 
 const TEST_USER = "test-user-pipeline";
@@ -41,8 +41,15 @@ describe.skipIf(skipIfNoDb)("Research Run pipeline", () => {
   });
 
   afterEach(async () => {
-    await db.delete(auditLog);
-    await db.delete(reports);
+    const runs = await db
+      .select({ id: researchRuns.id })
+      .from(researchRuns)
+      .where(eq(researchRuns.userId, TEST_USER));
+    const runIds = runs.map((r) => r.id);
+    if (runIds.length) {
+      await db.delete(auditLog).where(inArray(auditLog.researchRunId, runIds));
+      await db.delete(reports).where(inArray(reports.researchRunId, runIds));
+    }
     await db.delete(researchRuns).where(eq(researchRuns.userId, TEST_USER));
     await db.delete(stackEntries).where(eq(stackEntries.userId, TEST_USER));
   });
