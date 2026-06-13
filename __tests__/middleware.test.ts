@@ -42,4 +42,11 @@ describe("middleware auth protection", () => {
     expect(response?.status).not.toBe(401);
     expect(response?.status).not.toBe(307);
   });
+
+  it("allows unauthenticated requests to NextAuth routes to pass through", async () => {
+    mockAuth.mockResolvedValueOnce(null);
+    const response = await runMiddleware("http://localhost/api/auth/signin");
+    expect(response?.status).not.toBe(401);
+    expect(response?.status).not.toBe(307);
+  });
 });

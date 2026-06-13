@@ -2,6 +2,10 @@ import { auth } from "@/auth";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function middleware(req: NextRequest) {
+  if (req.nextUrl.pathname.startsWith("/api/auth/")) {
+    return NextResponse.next();
+  }
+
   const session = await auth();
 
   if (!session) {
