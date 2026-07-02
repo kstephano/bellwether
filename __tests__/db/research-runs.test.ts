@@ -61,3 +61,45 @@ describe.skipIf(skipIfNoDb)("listResearchRuns", () => {
     expect(runs[1].status).toBe("COMPLETED");
   });
 });
+
+describe.skipIf(skipIfNoDb)("listUserIdsWithTargets", () => {
+  let db: DbClient;
+
+  beforeAll(() => {
+    db = createDbClient(process.env.TEST_DATABASE_URL!);
+  });
+
+  afterEach(async () => {
+    const { stackEntries, freetextTopics, categories } = await import("@/lib/db/schema");
+    await db.delete(stackEntries).where(eq(stackEntries.userId, "targets-user-a"));
+    await db.delete(freetextTopics).where(eq(freetextTopics.userId, "targets-user-b"));
+    await db.delete(categories).where(eq(categories.name, "targets-test-category"));
+  });
+
+  it("returns each user with a Stack Entry or Free-text Topic exactly once", async () => {
+    const { createCategory, createStackEntry, createFreetextTopic, listUserIdsWithTargets } =
+      await import("@/lib/db/repository");
+    const category = await createCategory(db, "targets-test-category");
+    await createStackEntry(db, {
+      userId: "targets-user-a",
+      categoryId: category.id,
+      technology: "React",
+    });
+    await createStackEntry(db, {
+      userId: "targets-user-a",
+      categoryId: category.id,
+      technology: "Next.js",
+    });
+    await createFreetextTopic(db, {
+      userId: "targets-user-b",
+      text: "WebGPU adoption",
+      type: "STANDALONE_TOPIC",
+    });
+
+    const userIds = await listUserIdsWithTargets(db);
+
+    expect(userIds).toContain("targets-user-a");
+    expect(userIds).toContain("targets-user-b");
+    expect(userIds.filter((id) => id === "targets-user-a")).toHaveLength(1);
+  });
+});

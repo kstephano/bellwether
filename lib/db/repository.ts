@@ -170,6 +170,16 @@ export async function updateResearchRunStatus(
   return row;
 }
 
+export async function listUserIdsWithTargets(db: DbClient) {
+  const entryUsers = await db
+    .selectDistinct({ userId: stackEntries.userId })
+    .from(stackEntries);
+  const topicUsers = await db
+    .selectDistinct({ userId: freetextTopics.userId })
+    .from(freetextTopics);
+  return [...new Set([...entryUsers, ...topicUsers].map((r) => r.userId))];
+}
+
 export async function listResearchRuns(db: DbClient, userId: string) {
   // No createdAt on research_runs; DESC on startedAt puts NULLs (PENDING
   // runs that haven't started) first, then most recently started.
