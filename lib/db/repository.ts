@@ -134,6 +134,10 @@ export async function listTargetsWithReports(db: DbClient, userId: string) {
   return rows;
 }
 
+export async function deleteReportsForRun(db: DbClient, researchRunId: string) {
+  await db.delete(reports).where(eq(reports.researchRunId, researchRunId));
+}
+
 export async function getReport(db: DbClient, reportId: string) {
   const [row] = await db
     .select()

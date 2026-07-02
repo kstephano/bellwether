@@ -47,4 +47,14 @@ describe("fetchCurated", () => {
 
     expect(result).toContain("Pinned version: 19.2.0");
   });
+
+  it("throws on a non-OK response instead of producing hollow content", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(
+      async () => new Response("rate limit exceeded", { status: 403 })
+    );
+
+    const { fetchCurated } = await import("@/lib/research/sources/curated");
+
+    await expect(fetchCurated("React")).rejects.toThrow(/403/);
+  });
 });

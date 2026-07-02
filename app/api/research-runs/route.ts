@@ -2,7 +2,11 @@ import { auth } from "@/auth";
 import { tasks } from "@trigger.dev/sdk";
 import type { manualResearchRun } from "@/src/trigger/research-run";
 import { getDb } from "@/lib/db/client";
-import { createResearchRun, listResearchRuns } from "@/lib/db/repository";
+import {
+  createResearchRun,
+  listResearchRuns,
+  updateResearchRunStatus,
+} from "@/lib/db/repository";
 
 // The session carries no stable id, so the user's email is the userId
 // throughout the app.
@@ -18,10 +22,16 @@ export async function POST() {
   }
 
   const run = await createResearchRun(getDb(), { userId, triggeredBy: "MANUAL" });
-  await tasks.trigger<typeof manualResearchRun>("manual-research-run", {
-    researchRunId: run.id,
-    userId,
-  });
+  try {
+    await tasks.trigger<typeof manualResearchRun>("manual-research-run", {
+      researchRunId: run.id,
+      userId,
+    });
+  } catch {
+    // Don't strand the run in PENDING — only the job flips it otherwise.
+    await updateResearchRunStatus(getDb(), run.id, "FAILED");
+    return Response.json({ error: "Failed to enqueue research run" }, { status: 500 });
+  }
 
   return Response.json({ id: run.id, status: run.status }, { status: 202 });
 }

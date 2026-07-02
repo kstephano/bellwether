@@ -15,6 +15,9 @@ export async function search(query: string): Promise<string> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ api_key: apiKey, query }),
   });
+  if (!res.ok) {
+    throw new Error(`Tavily search request failed (${res.status})`);
+  }
   const data = (await res.json()) as TavilyResponse;
 
   const parts: string[] = [];

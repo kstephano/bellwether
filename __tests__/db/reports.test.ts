@@ -65,6 +65,25 @@ describe.skipIf(skipIfNoDb)("Report repository", () => {
     return row;
   }
 
+  it("deleteReportsForRun removes only that run's Reports", async () => {
+    const { deleteReportsForRun, listReportsForTarget } = await import("@/lib/db/repository");
+    const run = await createResearchRun(db, { userId: TEST_USER, triggeredBy: "MANUAL" });
+    const otherRun = await createResearchRun(db, { userId: TEST_USER, triggeredBy: "MANUAL" });
+    const entry = await createStackEntry(db, {
+      userId: TEST_USER,
+      categoryId: defaultCategoryId,
+      technology: "React",
+    });
+    await seedReport(TEST_USER, entry.id, run.id);
+    await seedReport(TEST_USER, entry.id, otherRun.id);
+
+    await deleteReportsForRun(db, run.id);
+
+    const remaining = await listReportsForTarget(db, entry.id, "STACK_ENTRY");
+    expect(remaining).toHaveLength(1);
+    expect(remaining[0].researchRunId).toBe(otherRun.id);
+  });
+
   it("listReportsForTarget returns Reports sorted by date descending", async () => {
     const { listReportsForTarget } = await import("@/lib/db/repository");
     const run = await createResearchRun(db, { userId: TEST_USER, triggeredBy: "MANUAL" });

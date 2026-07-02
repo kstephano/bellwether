@@ -6,6 +6,7 @@ import {
   listStackEntries,
   listFreetextTopics,
   listUserIdsWithTargets,
+  deleteReportsForRun,
   writeAuditLog,
 } from "@/lib/db/repository";
 import { runResearchPipeline } from "@/lib/research/pipeline";
@@ -20,6 +21,9 @@ import type { ResearchClients } from "@/lib/research/types";
 async function executeResearchRun(researchRunId: string, userId: string) {
   const db = getDb();
   await updateResearchRunStatus(db, researchRunId, "RUNNING");
+  // A retried attempt reruns every target, so drop any Reports a previous
+  // attempt already wrote for this run.
+  await deleteReportsForRun(db, researchRunId);
 
   try {
     const clients: ResearchClients = {
@@ -69,7 +73,13 @@ export const monthlyResearchRun = schedules.task({
     const userIds = await listUserIdsWithTargets(db);
     for (const userId of userIds) {
       const run = await createResearchRun(db, { userId, triggeredBy: "CRON" });
-      await executeResearchRun(run.id, userId);
+      try {
+        await executeResearchRun(run.id, userId);
+      } catch (error) {
+        // The run row already records FAILED; keep going so one user's
+        // failure doesn't abort (and a task retry doesn't duplicate) the rest.
+        console.error(`Research run ${run.id} for ${userId} failed`, error);
+      }
     }
   },
 });

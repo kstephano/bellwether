@@ -42,6 +42,16 @@ describe("search (Tavily)", () => {
     expect(body.api_key).toBe("test-tavily-key");
   });
 
+  it("throws on a non-OK response instead of producing hollow content", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(
+      async () => new Response(JSON.stringify({ error: "invalid api key" }), { status: 401 })
+    );
+
+    const { search } = await import("@/lib/research/sources/search");
+
+    await expect(search("anything")).rejects.toThrow(/401/);
+  });
+
   it("throws when TAVILY_API_KEY is missing", async () => {
     vi.stubEnv("TAVILY_API_KEY", "");
 
