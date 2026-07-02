@@ -1,6 +1,6 @@
 import { eq, and, or, desc } from "drizzle-orm";
 import type { DbClient } from "./client";
-import { categories, stackEntries, freetextTopics, sources, researchRuns, reports } from "./schema";
+import { categories, stackEntries, freetextTopics, sources, researchRuns, reports, auditLog } from "./schema";
 
 // ── Category ──────────────────────────────────────────────────────────────
 
@@ -168,6 +168,15 @@ export async function updateResearchRunStatus(
     .where(eq(researchRuns.id, id))
     .returning();
   return row;
+}
+
+export async function writeAuditLog(
+  db: DbClient,
+  researchRunId: string,
+  service: "TAVILY" | "ANTHROPIC",
+  characterCount: number
+) {
+  await db.insert(auditLog).values({ researchRunId, service, characterCount });
 }
 
 // ── Source ────────────────────────────────────────────────────────────────
