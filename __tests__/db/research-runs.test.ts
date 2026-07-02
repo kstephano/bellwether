@@ -30,3 +30,34 @@ describe.skipIf(skipIfNoDb)("createResearchRun", () => {
     expect(run.triggeredBy).toBe("MANUAL");
   });
 });
+
+describe.skipIf(skipIfNoDb)("listResearchRuns", () => {
+  let db: DbClient;
+
+  beforeAll(() => {
+    db = createDbClient(process.env.TEST_DATABASE_URL!);
+  });
+
+  afterEach(async () => {
+    await db.delete(researchRuns).where(eq(researchRuns.userId, TEST_USER));
+    await db.delete(researchRuns).where(eq(researchRuns.userId, "other-user-runs"));
+  });
+
+  it("returns only the user's runs, newest first", async () => {
+    const { createResearchRun, updateResearchRunStatus, listResearchRuns } = await import(
+      "@/lib/db/repository"
+    );
+    const first = await createResearchRun(db, { userId: TEST_USER, triggeredBy: "MANUAL" });
+    await updateResearchRunStatus(db, first.id, "RUNNING");
+    await updateResearchRunStatus(db, first.id, "COMPLETED");
+    const second = await createResearchRun(db, { userId: TEST_USER, triggeredBy: "MANUAL" });
+    await updateResearchRunStatus(db, second.id, "RUNNING");
+    await createResearchRun(db, { userId: "other-user-runs", triggeredBy: "CRON" });
+
+    const runs = await listResearchRuns(db, TEST_USER);
+
+    expect(runs.map((r) => r.id)).toEqual([second.id, first.id]);
+    expect(runs[0].status).toBe("RUNNING");
+    expect(runs[1].status).toBe("COMPLETED");
+  });
+});

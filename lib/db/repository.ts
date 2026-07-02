@@ -170,6 +170,16 @@ export async function updateResearchRunStatus(
   return row;
 }
 
+export async function listResearchRuns(db: DbClient, userId: string) {
+  // No createdAt on research_runs; DESC on startedAt puts NULLs (PENDING
+  // runs that haven't started) first, then most recently started.
+  return db
+    .select()
+    .from(researchRuns)
+    .where(eq(researchRuns.userId, userId))
+    .orderBy(desc(researchRuns.startedAt));
+}
+
 export async function writeAuditLog(
   db: DbClient,
   researchRunId: string,
