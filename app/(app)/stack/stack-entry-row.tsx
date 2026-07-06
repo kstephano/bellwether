@@ -5,6 +5,7 @@ import { Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { updateStackEntryAction, deleteStackEntryAction } from "./actions";
 import { fieldClass, selectClass } from "./field";
+import { SourcesDisclosure, type SourceView } from "./sources-disclosure";
 
 export type CategoryOption = { id: string; name: string };
 
@@ -18,9 +19,11 @@ export type StackEntryView = {
 export function StackEntryRow({
   entry,
   categories,
+  sources,
 }: {
   entry: StackEntryView;
   categories: CategoryOption[];
+  sources: SourceView[];
 }) {
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -102,34 +105,41 @@ export function StackEntryRow({
   }
 
   return (
-    <li className="group flex items-baseline justify-between gap-4 border-b py-2.5">
-      <span className="text-sm font-medium">
-        {entry.technology}
-        {entry.version && (
-          <span className="ml-2.5 font-mono text-xs text-muted-foreground">
-            {entry.version}
-          </span>
-        )}
-      </span>
-      <span className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
-        <Button
-          size="icon-xs"
-          variant="ghost"
-          aria-label={`Edit ${entry.technology}`}
-          onClick={() => setEditing(true)}
-        >
-          <Pencil />
-        </Button>
-        <Button
-          size="icon-xs"
-          variant="ghost"
-          aria-label={`Delete ${entry.technology}`}
-          disabled={pending}
-          onClick={remove}
-        >
-          <Trash2 />
-        </Button>
-      </span>
+    <li className="border-b py-2.5">
+      <div className="group flex items-baseline justify-between gap-4">
+        <span className="text-sm font-medium">
+          {entry.technology}
+          {entry.version && (
+            <span className="ml-2.5 font-mono text-xs text-muted-foreground">
+              {entry.version}
+            </span>
+          )}
+        </span>
+        <span className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+          <Button
+            size="icon-xs"
+            variant="ghost"
+            aria-label={`Edit ${entry.technology}`}
+            onClick={() => setEditing(true)}
+          >
+            <Pencil />
+          </Button>
+          <Button
+            size="icon-xs"
+            variant="ghost"
+            aria-label={`Delete ${entry.technology}`}
+            disabled={pending}
+            onClick={remove}
+          >
+            <Trash2 />
+          </Button>
+        </span>
+      </div>
+      <SourcesDisclosure
+        targetId={entry.id}
+        targetType="STACK_ENTRY"
+        sources={sources}
+      />
     </li>
   );
 }

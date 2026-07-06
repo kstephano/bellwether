@@ -6,8 +6,10 @@ import { getDb } from "@/lib/db/client";
 import {
   listCategories,
   listFreetextTopics,
+  listSources,
   listStackEntries,
 } from "@/lib/db/repository";
+import type { SourceView } from "./sources-disclosure";
 import { StackEntryRow, type StackEntryView } from "./stack-entry-row";
 import { AddEntryForm } from "./add-entry-form";
 import { TopicRow } from "./topic-row";
@@ -42,6 +44,24 @@ export default async function StackPage() {
     listCategories(db),
     listStackEntries(db, userId),
     listFreetextTopics(db, userId),
+  ]);
+
+  const sourcesByTarget = new Map<string, SourceView[]>();
+  await Promise.all([
+    ...entries.map(async (entry) => {
+      const rows = await listSources(db, entry.id, "STACK_ENTRY");
+      sourcesByTarget.set(
+        entry.id,
+        rows.map(({ id, type, url }) => ({ id, type, url }))
+      );
+    }),
+    ...topics.map(async (topic) => {
+      const rows = await listSources(db, topic.id, "FREE_TEXT_TOPIC");
+      sourcesByTarget.set(
+        topic.id,
+        rows.map(({ id, type, url }) => ({ id, type, url }))
+      );
+    }),
   ]);
 
   const defaults = DEFAULT_CATEGORY_ORDER.flatMap((name) =>
@@ -101,6 +121,7 @@ export default async function StackPage() {
                       key={entry.id}
                       entry={entry}
                       categories={categoryOptions}
+                      sources={sourcesByTarget.get(entry.id) ?? []}
                     />
                   ))}
                 </ul>
@@ -142,7 +163,11 @@ export default async function StackPage() {
           {topics.length > 0 ? (
             <ul>
               {topics.map((topic) => (
-                <TopicRow key={topic.id} topic={{ id: topic.id, text: topic.text }} />
+                <TopicRow
+                  key={topic.id}
+                  topic={{ id: topic.id, text: topic.text }}
+                  sources={sourcesByTarget.get(topic.id) ?? []}
+                />
               ))}
             </ul>
           ) : (

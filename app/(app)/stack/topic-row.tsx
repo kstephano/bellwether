@@ -5,13 +5,20 @@ import { Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { updateFreetextTopicAction, deleteFreetextTopicAction } from "./actions";
 import { fieldClass } from "./field";
+import { SourcesDisclosure, type SourceView } from "./sources-disclosure";
 
 export type FreetextTopicView = {
   id: string;
   text: string;
 };
 
-export function TopicRow({ topic }: { topic: FreetextTopicView }) {
+export function TopicRow({
+  topic,
+  sources,
+}: {
+  topic: FreetextTopicView;
+  sources: SourceView[];
+}) {
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -71,27 +78,34 @@ export function TopicRow({ topic }: { topic: FreetextTopicView }) {
   }
 
   return (
-    <li className="group flex items-baseline justify-between gap-4 border-b py-2.5">
-      <span className="text-sm font-medium">{topic.text}</span>
-      <span className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
-        <Button
-          size="icon-xs"
-          variant="ghost"
-          aria-label={`Edit topic ${topic.text}`}
-          onClick={() => setEditing(true)}
-        >
-          <Pencil />
-        </Button>
-        <Button
-          size="icon-xs"
-          variant="ghost"
-          aria-label={`Delete topic ${topic.text}`}
-          disabled={pending}
-          onClick={remove}
-        >
-          <Trash2 />
-        </Button>
-      </span>
+    <li className="border-b py-2.5">
+      <div className="group flex items-baseline justify-between gap-4">
+        <span className="text-sm font-medium">{topic.text}</span>
+        <span className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+          <Button
+            size="icon-xs"
+            variant="ghost"
+            aria-label={`Edit topic ${topic.text}`}
+            onClick={() => setEditing(true)}
+          >
+            <Pencil />
+          </Button>
+          <Button
+            size="icon-xs"
+            variant="ghost"
+            aria-label={`Delete topic ${topic.text}`}
+            disabled={pending}
+            onClick={remove}
+          >
+            <Trash2 />
+          </Button>
+        </span>
+      </div>
+      <SourcesDisclosure
+        targetId={topic.id}
+        targetType="FREE_TEXT_TOPIC"
+        sources={sources}
+      />
     </li>
   );
 }

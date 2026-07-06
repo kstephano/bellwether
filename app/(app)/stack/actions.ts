@@ -4,12 +4,14 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { getDb } from "@/lib/db/client";
 import {
+  addSource,
   createCategory,
   createFreetextTopic,
   createStackEntry,
   deleteCategory,
   deleteFreetextTopic,
   deleteStackEntry,
+  removeSource,
   updateFreetextTopic,
   updateStackEntry,
 } from "@/lib/db/repository";
@@ -107,6 +109,42 @@ export async function createCategoryAction(name: string): Promise<ActionResult> 
   const trimmed = name.trim();
   if (!trimmed) return { error: "Category name is required" };
   await createCategory(getDb(), trimmed);
+  revalidatePath("/stack");
+  return { error: null };
+}
+
+// The Source type is chosen explicitly by the user — never inferred
+// from the URL (issue #13).
+export async function addSourceAction(input: {
+  targetId: string;
+  targetType: "STACK_ENTRY" | "FREE_TEXT_TOPIC";
+  type: "RSS" | "URL" | "GITHUB_REPO";
+  url: string;
+}): Promise<ActionResult> {
+  const userId = await requireUserId();
+  const url = input.url.trim();
+  if (!url) return { error: "URL is required" };
+  try {
+    // addSource asserts the target belongs to this user.
+    await addSource(getDb(), { ...input, url, userId });
+  } catch (err) {
+    return {
+      error: err instanceof Error ? err.message : "Failed to add Source",
+    };
+  }
+  revalidatePath("/stack");
+  return { error: null };
+}
+
+export async function removeSourceAction(id: string): Promise<ActionResult> {
+  const userId = await requireUserId();
+  try {
+    await removeSource(getDb(), id, userId);
+  } catch (err) {
+    return {
+      error: err instanceof Error ? err.message : "Failed to remove Source",
+    };
+  }
   revalidatePath("/stack");
   return { error: null };
 }
