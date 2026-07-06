@@ -1,20 +1,103 @@
 import type { Metadata } from "next";
+import { auth } from "@/auth";
+import { redirect } from "next/navigation";
+import { getDb } from "@/lib/db/client";
+import { listCategories, listStackEntries } from "@/lib/db/repository";
+import { StackEntryRow, type StackEntryView } from "./stack-entry-row";
+import { AddEntryForm } from "./add-entry-form";
 
 export const metadata: Metadata = {
   title: "Research Configuration",
 };
 
-export default function StackPage() {
+// Fixed display order for the seven default Categories (issue #13);
+// custom Categories follow in creation order.
+const DEFAULT_CATEGORY_ORDER = [
+  "Front End",
+  "Back End",
+  "Infrastructure",
+  "AI",
+  "Environment",
+  "Data Platform",
+  "Security",
+];
+
+export default async function StackPage() {
+  const session = await auth();
+  if (!session?.user?.email) {
+    redirect("/api/auth/signin");
+  }
+  const userId = session.user.email;
+
+  const db = getDb();
+  const [allCategories, entries] = await Promise.all([
+    listCategories(db),
+    listStackEntries(db, userId),
+  ]);
+
+  const defaults = DEFAULT_CATEGORY_ORDER.flatMap((name) =>
+    allCategories.filter((cat) => cat.isDefault && cat.name === name)
+  );
+  const customs = allCategories.filter((cat) => !cat.isDefault);
+  const orderedCategories = [...defaults, ...customs];
+  const categoryOptions = orderedCategories.map(({ id, name }) => ({ id, name }));
+
+  const entriesByCategory = new Map<string, StackEntryView[]>();
+  for (const entry of entries) {
+    const view: StackEntryView = {
+      id: entry.id,
+      technology: entry.technology,
+      version: entry.version,
+      categoryId: entry.categoryId,
+    };
+    const list = entriesByCategory.get(entry.categoryId) ?? [];
+    list.push(view);
+    entriesByCategory.set(entry.categoryId, list);
+  }
+
   return (
-    <div>
-      <h1 className="font-heading text-3xl font-black tracking-tight">
-        Research Configuration
-      </h1>
-      <p className="mt-4 max-w-prose text-muted-foreground">
-        Choose what Bellwether researches: Stack Entries grouped by Category,
-        Free-text Topics, and the Sources that feed them. Configuration arrives
-        in the next slice.
-      </p>
+    <div className="max-w-3xl">
+      <header>
+        <h1 className="font-heading text-3xl font-black tracking-tight">
+          Research Configuration
+        </h1>
+        <p className="mt-3 max-w-prose text-muted-foreground">
+          Everything below is researched on every Research Run — Stack Entries
+          by Category, each with an optional version pin.
+        </p>
+      </header>
+
+      <div className="mt-10 space-y-10">
+        {orderedCategories.map((category) => {
+          const categoryEntries = entriesByCategory.get(category.id) ?? [];
+          return (
+            <section key={category.id} aria-label={category.name}>
+              <div className="flex items-baseline justify-between border-b-2 border-foreground pb-2">
+                <h2 className="kicker text-foreground">{category.name}</h2>
+                <span className="font-mono text-xs text-muted-foreground">
+                  {categoryEntries.length}
+                </span>
+              </div>
+              {categoryEntries.length > 0 ? (
+                <ul>
+                  {categoryEntries.map((entry) => (
+                    <StackEntryRow
+                      key={entry.id}
+                      entry={entry}
+                      categories={categoryOptions}
+                    />
+                  ))}
+                </ul>
+              ) : (
+                <p className="border-b py-2.5 font-heading text-sm italic text-muted-foreground">
+                  Nothing tracked yet.
+                </p>
+              )}
+              <AddEntryForm categoryId={category.id} />
+            </section>
+          );
+        })}
+      </div>
     </div>
   );
 }
