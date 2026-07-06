@@ -1,4 +1,4 @@
-import { eq, and, or, desc } from "drizzle-orm";
+import { eq, and, or, desc, count, max } from "drizzle-orm";
 import type { DbClient } from "./client";
 import { categories, stackEntries, freetextTopics, sources, researchRuns, reports, auditLog } from "./schema";
 
@@ -135,13 +135,44 @@ export async function listReportsForTarget(
 }
 
 export async function listTargetsWithReports(db: DbClient, userId: string) {
-  const rows = await db
-    .select({ id: stackEntries.id, userId: stackEntries.userId, technology: stackEntries.technology })
+  const entryRows = await db
+    .select({
+      id: stackEntries.id,
+      userId: stackEntries.userId,
+      name: stackEntries.technology,
+      reportCount: count(reports.id),
+      latestReportAt: max(reports.createdAt),
+    })
     .from(stackEntries)
-    .innerJoin(reports, eq(reports.targetId, stackEntries.id))
+    .innerJoin(
+      reports,
+      and(eq(reports.targetId, stackEntries.id), eq(reports.targetType, "STACK_ENTRY"))
+    )
     .where(eq(stackEntries.userId, userId))
     .groupBy(stackEntries.id, stackEntries.userId, stackEntries.technology);
-  return rows;
+
+  const topicRows = await db
+    .select({
+      id: freetextTopics.id,
+      userId: freetextTopics.userId,
+      name: freetextTopics.text,
+      reportCount: count(reports.id),
+      latestReportAt: max(reports.createdAt),
+    })
+    .from(freetextTopics)
+    .innerJoin(
+      reports,
+      and(eq(reports.targetId, freetextTopics.id), eq(reports.targetType, "FREE_TEXT_TOPIC"))
+    )
+    .where(eq(freetextTopics.userId, userId))
+    .groupBy(freetextTopics.id, freetextTopics.userId, freetextTopics.text);
+
+  return [
+    ...entryRows.map((row) => ({ ...row, targetType: "STACK_ENTRY" as const })),
+    ...topicRows.map((row) => ({ ...row, targetType: "FREE_TEXT_TOPIC" as const })),
+  ].sort(
+    (a, b) => (b.latestReportAt?.getTime() ?? 0) - (a.latestReportAt?.getTime() ?? 0)
+  );
 }
 
 export async function deleteReportsForRun(db: DbClient, researchRunId: string) {
@@ -155,6 +186,42 @@ export async function getReport(db: DbClient, reportId: string) {
     .where(eq(reports.id, reportId))
     .limit(1);
   return row ?? null;
+}
+
+export async function getTargetForUser(
+  db: DbClient,
+  targetId: string,
+  targetType: "STACK_ENTRY" | "FREE_TEXT_TOPIC",
+  userId: string
+): Promise<{ id: string; name: string } | null> {
+  if (targetType === "STACK_ENTRY") {
+    const [row] = await db
+      .select()
+      .from(stackEntries)
+      .where(and(eq(stackEntries.id, targetId), eq(stackEntries.userId, userId)))
+      .limit(1);
+    return row ? { id: row.id, name: row.technology } : null;
+  }
+  const [row] = await db
+    .select()
+    .from(freetextTopics)
+    .where(and(eq(freetextTopics.id, targetId), eq(freetextTopics.userId, userId)))
+    .limit(1);
+  return row ? { id: row.id, name: row.text } : null;
+}
+
+// Reports are strictly private (ADR-0002): a Report resolves only through
+// a target owned by the requesting user.
+export async function getReportForUser(
+  db: DbClient,
+  reportId: string,
+  userId: string
+) {
+  const report = await getReport(db, reportId);
+  if (!report) return null;
+  const target = await getTargetForUser(db, report.targetId, report.targetType, userId);
+  if (!target) return null;
+  return { report, target };
 }
 
 // ── Research Run ──────────────────────────────────────────────────────────
