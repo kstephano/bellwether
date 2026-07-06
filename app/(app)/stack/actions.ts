@@ -4,8 +4,11 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { getDb } from "@/lib/db/client";
 import {
+  createFreetextTopic,
   createStackEntry,
+  deleteFreetextTopic,
   deleteStackEntry,
+  updateFreetextTopic,
   updateStackEntry,
 } from "@/lib/db/repository";
 
@@ -58,6 +61,41 @@ export async function updateStackEntryAction(
 export async function deleteStackEntryAction(id: string): Promise<ActionResult> {
   const userId = await requireUserId();
   await deleteStackEntry(getDb(), id, userId);
+  revalidatePath("/stack");
+  return { error: null };
+}
+
+// The Topic type is never surfaced in the UI; new Topics get a fixed
+// default and the column is effectively dead data (issue #13).
+export async function createFreetextTopicAction(text: string): Promise<ActionResult> {
+  const userId = await requireUserId();
+  const trimmed = text.trim();
+  if (!trimmed) return { error: "Topic text is required" };
+  await createFreetextTopic(getDb(), {
+    userId,
+    text: trimmed,
+    type: "STANDALONE_TOPIC",
+  });
+  revalidatePath("/stack");
+  return { error: null };
+}
+
+export async function updateFreetextTopicAction(
+  id: string,
+  text: string
+): Promise<ActionResult> {
+  const userId = await requireUserId();
+  const trimmed = text.trim();
+  if (!trimmed) return { error: "Topic text is required" };
+  const updated = await updateFreetextTopic(getDb(), id, userId, { text: trimmed });
+  if (!updated) return { error: "Free-text Topic not found" };
+  revalidatePath("/stack");
+  return { error: null };
+}
+
+export async function deleteFreetextTopicAction(id: string): Promise<ActionResult> {
+  const userId = await requireUserId();
+  await deleteFreetextTopic(getDb(), id, userId);
   revalidatePath("/stack");
   return { error: null };
 }
