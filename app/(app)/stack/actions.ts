@@ -4,8 +4,10 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { getDb } from "@/lib/db/client";
 import {
+  createCategory,
   createFreetextTopic,
   createStackEntry,
+  deleteCategory,
   deleteFreetextTopic,
   deleteStackEntry,
   updateFreetextTopic,
@@ -96,6 +98,30 @@ export async function updateFreetextTopicAction(
 export async function deleteFreetextTopicAction(id: string): Promise<ActionResult> {
   const userId = await requireUserId();
   await deleteFreetextTopic(getDb(), id, userId);
+  revalidatePath("/stack");
+  return { error: null };
+}
+
+export async function createCategoryAction(name: string): Promise<ActionResult> {
+  await requireUserId();
+  const trimmed = name.trim();
+  if (!trimmed) return { error: "Category name is required" };
+  await createCategory(getDb(), trimmed);
+  revalidatePath("/stack");
+  return { error: null };
+}
+
+export async function deleteCategoryAction(id: string): Promise<ActionResult> {
+  await requireUserId();
+  try {
+    // Rejects default Categories and non-empty custom Categories; the
+    // message is shown to the user as-is.
+    await deleteCategory(getDb(), id);
+  } catch (err) {
+    return {
+      error: err instanceof Error ? err.message : "Failed to delete Category",
+    };
+  }
   revalidatePath("/stack");
   return { error: null };
 }

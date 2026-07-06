@@ -12,6 +12,7 @@ import { StackEntryRow, type StackEntryView } from "./stack-entry-row";
 import { AddEntryForm } from "./add-entry-form";
 import { TopicRow } from "./topic-row";
 import { AddTopicForm } from "./add-topic-form";
+import { AddCategoryForm, CustomCategoryHeader } from "./category-tools";
 
 export const metadata: Metadata = {
   title: "Research Configuration",
@@ -80,12 +81,19 @@ export default async function StackPage() {
           const categoryEntries = entriesByCategory.get(category.id) ?? [];
           return (
             <section key={category.id} aria-label={category.name}>
-              <div className="flex items-baseline justify-between border-b-2 border-foreground pb-2">
-                <h2 className="kicker text-foreground">{category.name}</h2>
-                <span className="font-mono text-xs text-muted-foreground">
-                  {categoryEntries.length}
-                </span>
-              </div>
+              {category.isDefault ? (
+                <div className="flex items-baseline justify-between border-b-2 border-foreground pb-2">
+                  <h2 className="kicker text-foreground">{category.name}</h2>
+                  <span className="font-mono text-xs text-muted-foreground">
+                    {categoryEntries.length}
+                  </span>
+                </div>
+              ) : (
+                <CustomCategoryHeader
+                  category={{ id: category.id, name: category.name }}
+                  count={categoryEntries.length}
+                />
+              )}
               {categoryEntries.length > 0 ? (
                 <ul>
                   {categoryEntries.map((entry) => (
@@ -105,6 +113,8 @@ export default async function StackPage() {
             </section>
           );
         })}
+
+        <AddCategoryForm />
       </div>
 
       <section aria-label="Free-text Topics" className="mt-16 border-t-2 border-foreground pt-6">

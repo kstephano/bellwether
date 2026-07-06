@@ -24,6 +24,16 @@ export async function deleteCategory(db: DbClient, id: string) {
     .limit(1);
   if (!cat) throw new Error("Category not found");
   if (cat.isDefault) throw new Error("Default categories cannot be deleted");
+  // Block-when-non-empty (issue #13): no cascade, no reassignment — deleting
+  // a Category must never silently destroy Stack Entries or their history.
+  const [occupant] = await db
+    .select({ id: stackEntries.id })
+    .from(stackEntries)
+    .where(eq(stackEntries.categoryId, id))
+    .limit(1);
+  if (occupant) {
+    throw new Error("Category still contains Stack Entries — empty it first");
+  }
   await db.delete(categories).where(eq(categories.id, id));
 }
 

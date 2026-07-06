@@ -140,6 +140,25 @@ describe.skipIf(skipIfNoDb)("Stack Configuration repository", () => {
     expect(cats.find((c) => c.id === cat.id)).toBeUndefined();
   });
 
+  it("rejects deleting a custom Category that still contains Stack Entries", async () => {
+    const cat = await createCategory(db, "Occupied Custom");
+    const entry = await createStackEntry(db, {
+      userId: TEST_USER,
+      categoryId: cat.id,
+      technology: "React",
+    });
+
+    await expect(deleteCategory(db, cat.id)).rejects.toThrow(
+      "Category still contains Stack Entries — empty it first"
+    );
+
+    // Once emptied, the same Category deletes cleanly.
+    await deleteStackEntry(db, entry.id, TEST_USER);
+    await deleteCategory(db, cat.id);
+    const cats = await listCategories(db);
+    expect(cats.find((c) => c.id === cat.id)).toBeUndefined();
+  });
+
   // ── Free-text Topic ───────────────────────────────────────────────────────
 
   it("creates a Free-text Topic with UNCATEGORISED_TECH type", async () => {
