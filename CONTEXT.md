@@ -23,7 +23,7 @@ _Avoid_: Feed, input, data source
 **Research Run**: A single execution of the research agent across all configured Stack Entries and Free-text Topics. Triggered either by monthly cron or manually. Produces exactly one Report.
 _Avoid_: Job, task, crawl, batch
 
-**Report**: The structured output of a Research Run. Contains four fixed sections — Change Digest, Current State, Threats & Opportunities, and Security Advisories — preceded by a Delta Section.
+**Report**: The structured output of a Research Run. Contains four fixed sections — Change Digest, Current State, Strategic Outlook, and Security Advisories — preceded by a Delta Section.
 _Avoid_: Finding, result, output, summary
 
 **Delta Section**: The opening section of a Report summarising what changed compared to the previous month's Report. Designed for 30-second triage before reading the full Report.
