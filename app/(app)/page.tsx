@@ -2,7 +2,10 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { getDb } from "@/lib/db/client";
 import { listResearchRuns } from "@/lib/db/repository";
-import { ResearchRunsPanel, type ResearchRunView } from "./research-runs-panel";
+import {
+  ResearchRunsPanel,
+  type ResearchRunView,
+} from "@/components/research-runs-panel";
 
 export default async function Home() {
   const session = await auth();
@@ -21,13 +24,17 @@ export default async function Home() {
     completedAt: run.completedAt?.toISOString() ?? null,
   }));
 
+  const dateline = new Date().toLocaleDateString("en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-24">
-      <h1 className="text-3xl font-semibold tracking-tight">Bellwether</h1>
-      <p className="mt-4 text-muted-foreground">
-        Signed in as {session.user?.email}
-      </p>
+    <div className="space-y-10">
+      <p className="kicker">{dateline}</p>
       <ResearchRunsPanel initialRuns={runViews} />
-    </main>
+    </div>
   );
 }
