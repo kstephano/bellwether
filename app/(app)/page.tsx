@@ -6,6 +6,7 @@ import {
   ResearchRunsPanel,
   type ResearchRunView,
 } from "@/components/research-runs-panel";
+import { DeltaDigest } from "./delta-digest";
 
 export default async function Home() {
   const session = await auth();
@@ -34,6 +35,7 @@ export default async function Home() {
   return (
     <div className="space-y-10">
       <p className="kicker">{dateline}</p>
+      {userId && <DeltaDigest userId={userId} />}
       <ResearchRunsPanel initialRuns={runViews} />
     </div>
   );

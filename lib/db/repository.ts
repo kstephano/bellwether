@@ -179,6 +179,13 @@ export async function deleteReportsForRun(db: DbClient, researchRunId: string) {
   await db.delete(reports).where(eq(reports.researchRunId, researchRunId));
 }
 
+export async function listReportsForRun(db: DbClient, researchRunId: string) {
+  return db
+    .select()
+    .from(reports)
+    .where(eq(reports.researchRunId, researchRunId));
+}
+
 export async function getReport(db: DbClient, reportId: string) {
   const [row] = await db
     .select()
@@ -259,6 +266,16 @@ export async function listUserIdsWithTargets(db: DbClient) {
     .selectDistinct({ userId: freetextTopics.userId })
     .from(freetextTopics);
   return [...new Set([...entryUsers, ...topicUsers].map((r) => r.userId))];
+}
+
+export async function getLatestCompletedRun(db: DbClient, userId: string) {
+  const [row] = await db
+    .select()
+    .from(researchRuns)
+    .where(and(eq(researchRuns.userId, userId), eq(researchRuns.status, "COMPLETED")))
+    .orderBy(desc(researchRuns.completedAt))
+    .limit(1);
+  return row ?? null;
 }
 
 export async function listResearchRuns(db: DbClient, userId: string) {
