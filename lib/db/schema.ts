@@ -87,6 +87,7 @@ export const researchRuns = pgTable("research_runs", {
   userId: text("user_id").notNull(),
   status: researchRunStatusEnum("status").notNull().default("PENDING"),
   triggeredBy: researchRunTriggerEnum("triggered_by").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
   startedAt: timestamp("started_at"),
   completedAt: timestamp("completed_at"),
 });

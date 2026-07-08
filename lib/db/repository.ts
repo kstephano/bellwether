@@ -1,4 +1,4 @@
-import { eq, and, or, desc, count, max } from "drizzle-orm";
+import { eq, and, or, lt, desc, count, max } from "drizzle-orm";
 import type { DbClient } from "./client";
 import { categories, stackEntries, freetextTopics, sources, researchRuns, reports, auditLog } from "./schema";
 
@@ -278,14 +278,42 @@ export async function getLatestCompletedRun(db: DbClient, userId: string) {
   return row ?? null;
 }
 
+// A Research Run's status is only ever flipped by the Trigger.dev job, so a
+// job that dies without reporting back strands the run in PENDING/RUNNING
+// forever — blocking the "Run now" button. Queue pickup takes seconds, so a
+// PENDING run this old is dead; a full research pass has hours of headroom.
+const PENDING_STALE_MS = 15 * 60 * 1000;
+const RUNNING_STALE_MS = 2 * 60 * 60 * 1000;
+
+async function failStaleResearchRuns(db: DbClient, userId: string) {
+  const now = Date.now();
+  await db
+    .update(researchRuns)
+    .set({ status: "FAILED", completedAt: new Date() })
+    .where(
+      and(
+        eq(researchRuns.userId, userId),
+        or(
+          and(
+            eq(researchRuns.status, "PENDING"),
+            lt(researchRuns.createdAt, new Date(now - PENDING_STALE_MS))
+          ),
+          and(
+            eq(researchRuns.status, "RUNNING"),
+            lt(researchRuns.startedAt, new Date(now - RUNNING_STALE_MS))
+          )
+        )
+      )
+    );
+}
+
 export async function listResearchRuns(db: DbClient, userId: string) {
-  // No createdAt on research_runs; DESC on startedAt puts NULLs (PENDING
-  // runs that haven't started) first, then most recently started.
+  await failStaleResearchRuns(db, userId);
   return db
     .select()
     .from(researchRuns)
     .where(eq(researchRuns.userId, userId))
-    .orderBy(desc(researchRuns.startedAt));
+    .orderBy(desc(researchRuns.createdAt));
 }
 
 export async function writeAuditLog(

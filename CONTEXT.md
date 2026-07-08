@@ -20,8 +20,8 @@ _Avoid_: Feed, input, data source
 
 ### Reporting
 
-**Research Run**: A single execution of the research agent across all configured Stack Entries and Free-text Topics. Triggered either by monthly cron or manually. Produces exactly one Report.
-_Avoid_: Job, task, crawl, batch
+**Research Run**: A single execution of the research agent across all configured Stack Entries and Free-text Topics. Triggered either by monthly cron or manually. Produces exactly one Report. A run that stalls — never picked up, or never finishing — is treated as Failed; there is no separate stale state.
+_Avoid_: Job, task, crawl, batch, stale run (as a status)
 
 **Report**: The structured output of a Research Run. Contains four fixed sections — Change Digest, Current State, Strategic Outlook, and Security Advisories — preceded by a Delta Section.
 _Avoid_: Finding, result, output, summary

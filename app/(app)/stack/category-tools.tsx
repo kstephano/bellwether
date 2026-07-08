@@ -85,7 +85,7 @@ export function AddCategoryForm() {
           placeholder="Category name"
           required
           autoFocus
-          className={`${fieldClass} w-56`}
+          className={`${fieldClass} w-full max-w-md flex-1`}
         />
         <Button type="submit" size="sm" disabled={pending}>
           {pending ? "Creating…" : "Create"}

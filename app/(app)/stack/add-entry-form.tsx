@@ -51,12 +51,12 @@ export function AddEntryForm({ categoryId }: { categoryId: string }) {
           placeholder="Technology"
           required
           autoFocus
-          className={`${fieldClass} w-44`}
+          className={`${fieldClass} w-full max-w-md flex-1`}
         />
         <input
           name="version"
           placeholder="Version (optional)"
-          className={`${fieldClass} w-32 font-mono text-xs`}
+          className={`${fieldClass} w-full max-w-64 flex-1 font-mono text-xs`}
         />
         <Button type="submit" size="sm" disabled={pending}>
           {pending ? "Adding…" : "Add"}

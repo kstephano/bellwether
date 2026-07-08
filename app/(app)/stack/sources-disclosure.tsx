@@ -127,7 +127,7 @@ export function SourcesDisclosure({
               type="url"
               placeholder="https://…"
               required
-              className={`${fieldClass} h-7 w-72 font-mono text-xs`}
+              className={`${fieldClass} h-7 w-full max-w-md flex-1 font-mono text-xs`}
             />
             <Button type="submit" size="xs" variant="outline" disabled={pending}>
               {pending ? "Adding…" : "Add source"}

@@ -62,6 +62,75 @@ describe.skipIf(skipIfNoDb)("listResearchRuns", () => {
   });
 });
 
+describe.skipIf(skipIfNoDb)("listResearchRuns staleness", () => {
+  let db: DbClient;
+
+  beforeAll(() => {
+    db = createDbClient(process.env.TEST_DATABASE_URL!);
+  });
+
+  afterEach(async () => {
+    await db.delete(researchRuns).where(eq(researchRuns.userId, TEST_USER));
+  });
+
+  function minutesAgo(minutes: number) {
+    return new Date(Date.now() - minutes * 60 * 1000);
+  }
+
+  it("flips a PENDING run older than 15 minutes to FAILED", async () => {
+    const { listResearchRuns } = await import("@/lib/db/repository");
+    const [stale] = await db
+      .insert(researchRuns)
+      .values({ userId: TEST_USER, triggeredBy: "MANUAL", createdAt: minutesAgo(16) })
+      .returning();
+
+    const runs = await listResearchRuns(db, TEST_USER);
+
+    expect(runs.find((r) => r.id === stale.id)?.status).toBe("FAILED");
+  });
+
+  it("flips a RUNNING run started more than 2 hours ago to FAILED", async () => {
+    const { listResearchRuns } = await import("@/lib/db/repository");
+    const [stale] = await db
+      .insert(researchRuns)
+      .values({
+        userId: TEST_USER,
+        triggeredBy: "CRON",
+        status: "RUNNING",
+        createdAt: minutesAgo(125),
+        startedAt: minutesAgo(121),
+      })
+      .returning();
+
+    const runs = await listResearchRuns(db, TEST_USER);
+
+    expect(runs.find((r) => r.id === stale.id)?.status).toBe("FAILED");
+  });
+
+  it("leaves fresh PENDING and RUNNING runs untouched", async () => {
+    const { listResearchRuns } = await import("@/lib/db/repository");
+    const [pending] = await db
+      .insert(researchRuns)
+      .values({ userId: TEST_USER, triggeredBy: "MANUAL", createdAt: minutesAgo(5) })
+      .returning();
+    const [running] = await db
+      .insert(researchRuns)
+      .values({
+        userId: TEST_USER,
+        triggeredBy: "MANUAL",
+        status: "RUNNING",
+        createdAt: minutesAgo(60),
+        startedAt: minutesAgo(59),
+      })
+      .returning();
+
+    const runs = await listResearchRuns(db, TEST_USER);
+
+    expect(runs.find((r) => r.id === pending.id)?.status).toBe("PENDING");
+    expect(runs.find((r) => r.id === running.id)?.status).toBe("RUNNING");
+  });
+});
+
 describe.skipIf(skipIfNoDb)("listUserIdsWithTargets", () => {
   let db: DbClient;
 

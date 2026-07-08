@@ -1,0 +1,1 @@
+ALTER TABLE "research_runs" ADD COLUMN "created_at" timestamp DEFAULT now() NOT NULL;
